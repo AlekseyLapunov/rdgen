@@ -408,7 +408,7 @@ jobs:
         continue-on-error: true
         run: |
           $user = '${{ secrets.AUTH_URL_USER }}'
-          $pass = '${{ secrets.AUTH_URL_PASSWORD }}'
+          $pass = '${{ secrets.AUTH_URL_PASS }}'
           
           $pair = "$($user):$($pass)"
           
@@ -565,7 +565,7 @@ jobs:
         continue-on-error: true
         run: |
           $user = '${{ secrets.AUTH_URL_USER }}'
-          $pass = '${{ secrets.AUTH_URL_PASSWORD }}'
+          $pass = '${{ secrets.AUTH_URL_PASS }}'
           
           $pair = "$($user):$($pass)"
           
