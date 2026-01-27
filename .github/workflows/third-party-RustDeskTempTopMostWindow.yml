@@ -29,7 +29,6 @@ on:
 
 env:
   project_path: WindowInjection/WindowInjection.vcxproj
-  PYTHONIOENCODING: utf-8
 
 jobs:
   build-RustDeskTempTopMostWindow:
@@ -97,10 +96,14 @@ jobs:
             print(f"Error: Could not decrypt ZIP. Check if password matches. {e}")
             exit(1)
 
-          with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+          env_file_path = os.environ['GITHUB_ENV']
+          print(f"env_file_path: {env_file_path}")
+          with open(env_file_path, 'ab') as env_file:
             for key, value in secrets.items():
-              print(f"::add-mask::{value}")
-              env_file.write(f"{key}={value}\n")
+              if isinstance(value, str):
+                print(f"::add-mask::{value}")
+                line = f"{key}={value}\n"
+                env_file.write(line.encode('utf-8'))
           
           print("Secrets loaded into environment.")
 
