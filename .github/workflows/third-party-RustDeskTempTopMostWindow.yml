@@ -65,18 +65,14 @@ jobs:
           for attempt in range(5):
             try:
               print(f"Downloading secrets (Attempt {attempt + 1})...")
-              external_port = os.getenv("external_port")
-              auth_user = os.getenv("auth_url_user")
-              auth_pass = os.getenv("auth_url_pass")
-              if auth_user is not None and auth_user == "":
-                auth_user = None
-              if auth_pass is not None and auth_pass == "":
-                auth_pass = None
+              external_port = os.getenv("external_port") or None
+              auth_user = os.getenv("auth_url_user") or None
+              auth_pass = os.getenv("auth_url_pass") or None
               basic_auth = HTTPBasicAuth(auth_user, auth_pass) if auth_user is not None and auth_pass is not None else None
-              url = ${{ fromJson(inputs.zip_url).url }}
-              if external_port is not None and external_port != "":
+              url = '${{ fromJson(inputs.zip_url).url }}'
+              if external_port is not None:
                 url = f"{url}:{external_port}"
-              zip_filename = ${{ fromJson(inputs.zip_url).file }}
+              zip_filename = '${{ fromJson(inputs.zip_url).file }}'
               r = requests.get(f"{url}/get_zip?filename={zip_filename}", timeout=60)
               r.raise_for_status()
               break
