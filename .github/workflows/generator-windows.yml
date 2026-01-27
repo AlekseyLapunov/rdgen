@@ -80,26 +80,45 @@ jobs:
       - name: install python deps
         run: |
           pip install requests pyzipper
+          
       - name: Download, Decrypt, and Mask
         shell: python
+        env:
+          external_port: ${{ secrets.EXTERNAL_PORT }}
+          auth_url_user: ${{ secrets.AUTH_URL_USER }}
+          auth_url_pass: ${{ secrets.AUTH_URL_PASS }}
         run: |
           import requests
+          from requests.auth import HTTPBasicAuth
           import pyzipper
           import io
           import os
+          import sys
           import json
           import time
+
+          sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
           for attempt in range(5):
             try:
               print(f"Downloading secrets (Attempt {attempt + 1})...")
-              r = requests.get('${{ fromJson(inputs.zip_url).url }}/get_zip?filename=${{ fromJson(inputs.zip_url).file }}', timeout=60)
+              external_port = os.getenv("external_port") or None
+              auth_user = os.getenv("auth_url_user") or None
+              auth_pass = os.getenv("auth_url_pass") or None
+              basic_auth = None
+              if auth_user is not None and auth_pass is not None: 
+                basic_auth = HTTPBasicAuth(auth_user, auth_pass)
+              url = '${{ fromJson(inputs.zip_url).url }}'
+              if external_port is not None:
+                url = f"{url}:{external_port}"
+              zip_filename = '${{ fromJson(inputs.zip_url).file }}'
+              r = requests.get(f"{url}/get_zip?filename={zip_filename}", auth=basic_auth, timeout=60)
               r.raise_for_status()
               break
             except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
               if attempt < 4:
                 print(f"Timeout/Error occurred: {e}. Retrying in 5 seconds...")
-                time.sleep(30)
+                time.sleep(5)
               else:
                 print("Max retries reached. Failing.")
                 raise e
@@ -113,7 +132,7 @@ jobs:
             print(f"Error: Could not decrypt ZIP. Check if password matches. {e}")
             exit(1)
 
-          with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
             for key, value in secrets.items():
               print(f"::add-mask::{value}")
               env_file.write(f"{key}={value}\n")
