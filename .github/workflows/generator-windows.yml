@@ -407,7 +407,19 @@ jobs:
         if: ${{ env.iconlink_url != 'false' }}
         continue-on-error: true
         run: |
-          Invoke-WebRequest -Uri ${{ secrets.GENURL }}/get_png?filename=${{ env.iconlink_file }}"&"uuid=${{ env.iconlink_uuid }} -OutFile ./res/iconx.png 
+          $user = '${{ secrets.AUTH_URL_USER }}'
+          $pass = '${{ secrets.AUTH_URL_PASSWORD }}'
+          
+          $pair = "$($user):$($pass)"
+          
+          $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+          
+          $basicAuthValue = "Basic $encodedCreds"
+          
+          $Headers = @{
+              Authorization = $basicAuthValue
+          }
+          Invoke-WebRequest -Uri ${{ secrets.GENURL }}/get_png?filename=${{ env.iconlink_file }}"&"uuid=${{ env.iconlink_uuid }} -Headers $Headers -OutFile ./res/iconx.png 
           mv ./res/icon.ico ./res/icon.ico.bak
           mv ./res/icon.png ./res/icon.png.bak
           mv ./res/tray-icon.ico ./res/tray-icon.ico.bak
@@ -552,7 +564,19 @@ jobs:
         if: ${{ env.logolink_url != 'false' }}
         continue-on-error: true
         run: |
-          Invoke-WebRequest -Uri ${{ env.GENURL }}/get_png?filename=${{ env.logolink_file }}"&"uuid=${{ env.logolink_uuid }} -OutFile ./rustdesk/data/flutter_assets/assets/logo.png
+          $user = '${{ secrets.AUTH_URL_USER }}'
+          $pass = '${{ secrets.AUTH_URL_PASSWORD }}'
+          
+          $pair = "$($user):$($pass)"
+          
+          $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+          
+          $basicAuthValue = "Basic $encodedCreds"
+          
+          $Headers = @{
+              Authorization = $basicAuthValue
+          }
+          Invoke-WebRequest -Uri ${{ env.GENURL }}/get_png?filename=${{ env.logolink_file }}"&"uuid=${{ env.logolink_uuid }} -Headers $Headers -OutFile ./rustdesk/data/flutter_assets/assets/logo.png
 
       - name: find Runner.res
         # Windows: find Runner.res (compiled from ./flutter/windows/runner/Runner.rc), copy to ./Runner.res
