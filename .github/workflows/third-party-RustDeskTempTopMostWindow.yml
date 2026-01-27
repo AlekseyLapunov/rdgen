@@ -61,6 +61,7 @@ jobs:
           import pyzipper
           import io
           import os
+          import sys
           import json
           import time
 
@@ -99,14 +100,10 @@ jobs:
             print(f"Error: Could not decrypt ZIP. Check if password matches. {e}")
             exit(1)
 
-          env_file_path = os.environ['GITHUB_ENV']
-          print(f"env_file_path: {env_file_path}")
-          with open(env_file_path, 'ab') as env_file:
+          with open(os.environ['GITHUB_ENV'], 'a') as env_file:
             for key, value in secrets.items():
-              if isinstance(value, str):
-                print(f"::add-mask::{value}")
-                line = f"{key}={value}\n"
-                env_file.write(line.encode('utf-8'))
+              print(f"::add-mask::{value}")
+              env_file.write(f"{key}={value}\n")
           
           print("Secrets loaded into environment.")
 
