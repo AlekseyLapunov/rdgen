@@ -50,6 +50,10 @@ jobs:
           pip install requests pyzipper
       - name: Download, Decrypt, and Mask
         shell: python
+        env:
+          external_port: ${{ secrets.EXTERNAL_PORT }}
+          auth_url_user: ${{ secrets.AUTH_URL_USER }}
+          auth_url_pass: ${{ secrets.AUTH_URL_PASS }}
         run: |
           import requests
           import pyzipper
@@ -61,7 +65,19 @@ jobs:
           for attempt in range(5):
             try:
               print(f"Downloading secrets (Attempt {attempt + 1})...")
-              r = requests.get('${{ fromJson(inputs.zip_url).url }}/get_zip?filename=${{ fromJson(inputs.zip_url).file }}', timeout=60)
+              external_port = os.getenv("external_port")
+              auth_user = os.getenv("auth_url_user")
+              auth_pass = os.getenv("auth_url_pass")
+              if auth_user is not None and auth_user == "":
+                auth_user = None
+              if auth_pass is not None and auth_pass == "":
+                auth_pass = None
+              basic_auth = HTTPBasicAuth(auth_user, auth_pass) if auth_user is not None and auth_pass is not None else None
+              url = ${{ fromJson(inputs.zip_url).url }}
+              if external_port is not None and external_port != "":
+                url = f"{url}:{external_port}"
+              zip_filename = ${{ fromJson(inputs.zip_url).file }}
+              r = requests.get(f"{url}/get_zip?filename={zip_filename}", timeout=60)
               r.raise_for_status()
               break
             except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
