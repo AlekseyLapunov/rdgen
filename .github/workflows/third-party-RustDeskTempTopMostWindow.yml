@@ -29,6 +29,7 @@ on:
 
 env:
   project_path: WindowInjection/WindowInjection.vcxproj
+  PYTHONIOENCODING: utf-8
 
 jobs:
   build-RustDeskTempTopMostWindow:
