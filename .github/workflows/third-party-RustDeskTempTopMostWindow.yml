@@ -48,6 +48,7 @@ jobs:
       - name: install python deps
         run: |
           pip install requests pyzipper
+          
       - name: Download, Decrypt, and Mask
         shell: python
         env:
@@ -62,6 +63,8 @@ jobs:
           import os
           import json
           import time
+
+          sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
           for attempt in range(5):
             try:
