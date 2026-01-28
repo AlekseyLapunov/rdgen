@@ -76,43 +76,7 @@ jobs:
               vcpkg-triplet: x64-windows-static,
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
-    steps:
-      - name: extract custom client version
-        continue-on-error: true
-        shell: python
-        run: |
-          input_filename = "${{ env.filename }}"
-          input_filename = input_filename.replace(".", "_")
-          while input_filename.count("__") != 0:
-              input_filename = input_filename.replace("__", "_")
-          splitted = input_filename.split("_")
-          if len(splitted) < 2:
-              print("No version provided")
-              exit(-1)
-          version_tokens = splitted[-2:]
-          for s in version_tokens:
-              if not str.isdigit(s):
-                  print("No version provided or version representation error")
-                  exit(-1)
-          custom_client_version = f"{version_tokens[0]}.{version_tokens[1]}"
-          appname_custom_version = "${{ env.appname }}"
-          appname_custom_version = f"{appname_custom_version} {custom_client_version}"
-          env_file = os.getenv('GITHUB_ENV')
-          with open(env_file, "a") as f:
-              f.write(f"custom_client_version={custom_client_version}\n")
-              f.write(f"appname_custom_version={appname_custom_version}\n")
-
-      - name: sanitize custom version and appname
-        if: env.custom_client_version == '' || env.appname_custom_version == ''
-        shell: python
-        run: |
-          blank_version = "0.0"
-          restore_appname = ${{ env.filename }}
-          env_file = os.getenv('GITHUB_ENV')
-          with open(env_file, "a") as f:
-              f.write(f"custom_client_version={blank_version}\n")
-              f.write(f"appname_custom_version={restore_appname}\n")
-    
+    steps:    
       - name: install python deps
         run: |
           pip install requests pyzipper
@@ -192,6 +156,42 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
       
+      - name: extract custom client version
+        continue-on-error: true
+        shell: python
+        run: |
+          input_filename = "${{ env.filename }}"
+          input_filename = input_filename.replace(".", "_")
+          while input_filename.count("__") != 0:
+              input_filename = input_filename.replace("__", "_")
+          splitted = input_filename.split("_")
+          if len(splitted) < 2:
+              print("No version provided")
+              exit(-1)
+          version_tokens = splitted[-2:]
+          for s in version_tokens:
+              if not str.isdigit(s):
+                  print("No version provided or version representation error")
+                  exit(-1)
+          custom_client_version = f"{version_tokens[0]}.{version_tokens[1]}"
+          appname_custom_version = "${{ env.appname }}"
+          appname_custom_version = f"{appname_custom_version} {custom_client_version}"
+          env_file = os.getenv('GITHUB_ENV')
+          with open(env_file, "a", encoding='utf-8') as f:
+              f.write(f"custom_client_version={custom_client_version}\n")
+              f.write(f"appname_custom_version={appname_custom_version}\n")
+
+      - name: sanitize custom version and appname
+        if: env.custom_client_version == '' || env.appname_custom_version == ''
+        shell: python
+        run: |
+          blank_version = "0.0"
+          restore_appname = "${{ env.filename }}"
+          env_file = os.getenv('GITHUB_ENV')
+          with open(env_file, "a", encoding='utf-8') as f:
+              f.write(f"custom_client_version={blank_version}\n")
+              f.write(f"appname_custom_version={restore_appname}\n")
+
       - name: Set rdgen value
         if: ${{ env.rdgen == 'true' }}
         run: |
