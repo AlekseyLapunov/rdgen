@@ -160,6 +160,8 @@ jobs:
         continue-on-error: true
         shell: python
         run: |
+          import os
+        
           input_filename = "${{ env.filename }}"
           input_filename = input_filename.replace(".", "_")
           while input_filename.count("__") != 0:
@@ -176,21 +178,21 @@ jobs:
           custom_client_version = f"{version_tokens[0]}.{version_tokens[1]}"
           appname_custom_version = "${{ env.appname }}"
           appname_custom_version = f"{appname_custom_version} {custom_client_version}"
-          env_file = os.getenv('GITHUB_ENV')
-          with open(env_file, "a", encoding='utf-8') as f:
-              f.write(f"custom_client_version={custom_client_version}\n")
-              f.write(f"appname_custom_version={appname_custom_version}\n")
+          with open(os.environ['GITHUB_ENV'], "a", encoding='utf-8') as env_file:
+              env_file.write(f"custom_client_version={custom_client_version}\n")
+              env_file.write(f"appname_custom_version={appname_custom_version}\n")
 
       - name: sanitize custom version and appname
         if: env.custom_client_version == '' || env.appname_custom_version == ''
         shell: python
         run: |
+          import os
+          
           blank_version = "0.0"
           restore_appname = "${{ env.filename }}"
-          env_file = os.getenv('GITHUB_ENV')
-          with open(env_file, "a", encoding='utf-8') as f:
-              f.write(f"custom_client_version={blank_version}\n")
-              f.write(f"appname_custom_version={restore_appname}\n")
+          with open(os.environ['GITHUB_ENV'], "a", encoding='utf-8') as env_file:
+              env_file.write(f"custom_client_version={blank_version}\n")
+              env_file.write(f"appname_custom_version={restore_appname}\n")
 
       - name: Set rdgen value
         if: ${{ env.rdgen == 'true' }}
