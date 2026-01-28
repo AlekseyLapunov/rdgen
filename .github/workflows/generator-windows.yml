@@ -77,6 +77,42 @@ jobs:
             }
           # - { target: aarch64-pc-windows-msvc, os: windows-2022, arch: aarch64 }
     steps:
+      - name: extract custom client version
+        continue-on-error: true
+        shell: python
+        run: |
+          input_filename = "${{ env.filename }}"
+          input_filename = input_filename.replace(".", "_")
+          while input_filename.count("__") != 0:
+              input_filename = input_filename.replace("__", "_")
+          splitted = input_filename.split("_")
+          if len(splitted) < 2:
+              print("No version provided")
+              exit(-1)
+          version_tokens = splitted[-2:]
+          for s in version_tokens:
+              if not str.isdigit(s):
+                  print("No version provided or version representation error")
+                  exit(-1)
+          custom_client_version = f"{version_tokens[0]}.{version_tokens[1]}"
+          appname_custom_version = "${{ env.appname }}"
+          appname_custom_version = f"{appname_custom_version} {custom_client_version}"
+          env_file = os.getenv('GITHUB_ENV')
+          with open(env_file, "a") as f:
+              f.write(f"custom_client_version={custom_client_version}\n")
+              f.write(f"appname_custom_version={appname_custom_version}\n")
+
+      - name: sanitize custom version and appname
+        if: env.custom_client_version == '' || env.appname_custom_version == ''
+        shell: python
+        run: |
+          blank_version = "0.0"
+          restore_appname = ${{ env.filename }}
+          env_file = os.getenv('GITHUB_ENV')
+          with open(env_file, "a") as f:
+              f.write(f"custom_client_version={blank_version}\n")
+              f.write(f"appname_custom_version={restore_appname}\n")
+    
       - name: install python deps
         run: |
           pip install requests pyzipper
@@ -227,13 +263,15 @@ jobs:
           sed -i -e 's|VALUE "InternalName", "rustdesk" "\0"|VALUE "InternalName", "${{ env.appname }}" "\0"|' ./flutter/windows/runner/Runner.rc
           sed -i -e 's|"rustdesk.exe"|"${{ env.filename }}"|' ./flutter/windows/runner/Runner.rc
           sed -i -e 's|"RustDesk"|"${{ env.appname }}"|' ./flutter/windows/runner/Runner.rc
-          # ./src/lang/en.rs
+          # ./src/lang
           # change powered by rustdek to powered by compname
-          if [ ! -z "${{ env.compname }}" ]; then
-            find ./src/lang -name "*.rs" -exec sed -i '/powered_by_me/s|RustDesk|${{ env.compname }}|g' {} \;
-          fi
+          #if [ ! -z "${{ env.compname }}" ]; then
+          #  find ./src/lang -name "*.rs" -exec sed -i '/powered_by_me/s|RustDesk|${{ env.compname }}|g' {} \;
+          #fi
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ env.appname }}|' {} \;
-          sed -i -e 's|RustDesk|${{ env.appname }}|' ./res/msi/Package/License.rtf
+          sed -i '/"powered_by_me"/s|"[^"]*")$|Версия ${{ env.custom_client_version }}")|' ./src/lang/ru.rs
+          sed -i '/"Slogan_tip"/s|"[^"]*")$|BP.Connect: собрано на основе RustDesk")|' ./src/lang/ru.rs
+          #sed -i -e 's|RustDesk|${{ env.appname }}|' ./res/msi/Package/License.rtf
 
       - name: fix registry if appname has a space
         if: contains(env.appname, ' ')
@@ -260,14 +298,15 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
-          sed -i -e 's|PURSLANE|${{ env.compname }}|' ./res/msi/preprocess.py
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/preprocess.py
-          sed -i -e 's|"Copyright © 2025 Purslane Ltd. All rights reserved."|"Copyright © 2025 ${{ env.compname }}. All rights reserved."|' ./flutter/windows/runner/Runner.rc
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/windows/runner/Runner.rc
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./Cargo.toml
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/Package/License.rtf
+          echo 'All Purslane Ltd rights reserved!'
+          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
+          #sed -i -e 's|PURSLANE|${{ env.compname }}|' ./res/msi/preprocess.py
+          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/preprocess.py
+          #sed -i -e 's|"Copyright © 2025 Purslane Ltd. All rights reserved."|"Copyright © 2025 ${{ env.compname }}. All rights reserved."|' ./flutter/windows/runner/Runner.rc
+          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/windows/runner/Runner.rc
+          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./Cargo.toml
+          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
+          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/Package/License.rtf
              
       - name: change url to custom
         if: env.urlLink != 'https://rustdesk.com'
@@ -280,7 +319,7 @@ jobs:
           sed -i -e "s|launchUrlString('https://rustdesk.com/privacy.html')|launchUrlString('${{ env.urlLink }}/privacy.html')|" ./flutter/lib/desktop/pages/desktop_setting_page.dart
           sed -i -e "s|const url = 'https://rustdesk.com/';|const url = '${{ env.urlLink }}';|" ./flutter/lib/mobile/pages/settings_page.dart
           sed -i -e "s|launchUrlString('https://rustdesk.com/privacy.html')|launchUrlString('${{ env.urlLink }}/privacy.html')|" ./flutter/lib/mobile/pages/settings_page.dart
-          sed -i -e "s|https://rustdesk.com/privacy.html|${{ env.urlLink }}/privacy.html|" ./flutter/lib/desktop/pages/install_page.dart
+          #sed -i -e "s|https://rustdesk.com/privacy.html|${{ env.urlLink }}/privacy.html|" ./flutter/lib/desktop/pages/install_page.dart
           sed -i -e "s|rustdesk.com|${{ env.urlLink }}|" ./res/msi/Package/License.rtf
 
       - name: change download link to custom
@@ -712,26 +751,26 @@ jobs:
 
       - name: rename rustdesk.exe to filename.exe
         run: |
-          mv ./SignOutput/rustdesk.exe "./SignOutput/${{ env.filename }}.exe" || echo "rustdesk"
+          mv ./SignOutput/rustdesk.exe "./SignOutput/${{ env.appname_custom_version }}.exe" || echo "rustdesk"
 
       - name: rename rustdesk.msi to filename.msi
         continue-on-error: true
         run: |
-          mv ./SignOutput/rustdesk.msi "./SignOutput/${{ env.filename }}.msi" || echo "rustdesk"
+          mv ./SignOutput/rustdesk.msi "./SignOutput/${{ env.appname_custom_version }}.msi" || echo "rustdesk"
 
       - name: send file to rdgen server
         if: ${{ env.rdgen == 'true' }}
         shell: bash
         run: |
-          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.exe" -F "uuid=${{ env.uuid }}" ${{ secrets.GENURL }}/save_custom_client
-          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.msi" -F "uuid=${{ env.uuid }}" ${{ secrets.GENURL }}/save_custom_client || true
+          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.appname_custom_version }}.exe" -F "uuid=${{ env.uuid }}" ${{ secrets.GENURL }}/save_custom_client
+          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.appname_custom_version }}.msi" -F "uuid=${{ env.uuid }}" ${{ secrets.GENURL }}/save_custom_client || true
 
       - name: send file to api server
         if: ${{ env.rdgen == 'false' }}
         shell: bash
         run: |
-          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.exe" ${{ env.apiServer }}/api/save_custom_client
-          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.filename }}.msi" ${{ env.apiServer }}/api/save_custom_client || true
+          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.appname_custom_version }}.exe" ${{ env.apiServer }}/api/save_custom_client
+          curl -i -X POST -H "Content-Type: multipart/form-data" -H "Authorization: Bearer ${{ env.token }}" -F "file=@./SignOutput/${{ env.appname_custom_version }}.msi" ${{ env.apiServer }}/api/save_custom_client || true
 
       - name: Report Status
         uses: fjogeleit/http-request-action@v1
