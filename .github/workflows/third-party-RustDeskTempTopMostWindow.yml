@@ -134,7 +134,7 @@ jobs:
             $Headers = @{
                 Authorization = $basicAuthValue
             }
-            Invoke-WebRequest -Uri ${{ env.privacylink_url }}/get_png?filename=${{ env.privacylink_file }}"&"uuid=${{ env.privacylink_uuid }} -Headers $Headers -OutFile privacy.png
+            Invoke-WebRequest -Uri ${{ secrets.GENURL }}/get_png?filename=${{ env.privacylink_file }}"&"uuid=${{ env.privacylink_uuid }} -Headers $Headers -OutFile privacy.png
             Invoke-WebRequest -Uri https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/privacyScreen.py -OutFile privacyScreen.py
             python privacyScreen.py
             rm ./WindowInjection/img.cpp
