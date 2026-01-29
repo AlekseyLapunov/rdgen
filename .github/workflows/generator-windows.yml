@@ -267,8 +267,8 @@ jobs:
           sed -i -e 's|"RustDesk"|"${{ env.appname }}"|' ./flutter/windows/runner/Runner.rc
           # ./src/lang
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ env.appname }}|' {} \;
-          sed -i '/"powered_by_me"/s|"[^"]*")$|Версия ${{ env.custom_client_version }}")|' ./src/lang/ru.rs
-          sed -i '/"Slogan_tip"/s|"[^"]*")$|${{ env.appname_custom_version }}: собрано на основе RustDesk ${{ inputs.version }}")|' ./src/lang/ru.rs
+          sed -E -i 's/(.*"powered_by_me",\s*")[^"]*(".*)/\1${{ env.appname_custom_version }}\2/' ./src/lang/ru.rs
+          sed -E -i 's/(.*"Slogan_tip",\s*")[^"]*(".*)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' ./src/lang/ru.rs
 
       - name: fix registry if appname has a space
         if: contains(env.appname, ' ')
