@@ -68,26 +68,45 @@ jobs:
       - name: install python deps
         run: |
           pip install requests pyzipper
+
       - name: Download, Decrypt, and Mask
         shell: python
+        env:
+          external_port: ${{ secrets.EXTERNAL_PORT }}
+          auth_url_user: ${{ secrets.AUTH_URL_USER }}
+          auth_url_pass: ${{ secrets.AUTH_URL_PASS }}
         run: |
           import requests
+          from requests.auth import HTTPBasicAuth
           import pyzipper
           import io
           import os
+          import sys
           import json
           import time
+
+          sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
           for attempt in range(5):
             try:
               print(f"Downloading secrets (Attempt {attempt + 1})...")
-              r = requests.get('${{ fromJson(inputs.zip_url).url }}/get_zip?filename=${{ fromJson(inputs.zip_url).file }}', timeout=60)
+              external_port = os.getenv("external_port") or None
+              auth_user = os.getenv("auth_url_user") or None
+              auth_pass = os.getenv("auth_url_pass") or None
+              basic_auth = None
+              if auth_user is not None and auth_pass is not None: 
+                basic_auth = HTTPBasicAuth(auth_user, auth_pass)
+              url = '${{ fromJson(inputs.zip_url).url }}'
+              if external_port is not None:
+                url = f"{url}:{external_port}"
+              zip_filename = '${{ fromJson(inputs.zip_url).file }}'
+              r = requests.get(f"{url}/get_zip?filename={zip_filename}", auth=basic_auth, timeout=60)
               r.raise_for_status()
               break
             except (requests.exceptions.RequestException, requests.exceptions.Timeout) as e:
               if attempt < 4:
                 print(f"Timeout/Error occurred: {e}. Retrying in 5 seconds...")
-                time.sleep(30)
+                time.sleep(5)
               else:
                 print("Max retries reached. Failing.")
                 raise e
@@ -101,7 +120,7 @@ jobs:
             print(f"Error: Could not decrypt ZIP. Check if password matches. {e}")
             exit(1)
 
-          with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
             for key, value in secrets.items():
               print(f"::add-mask::{value}")
               env_file.write(f"{key}={value}\n")
@@ -124,6 +143,44 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+      
+      - name: extract custom client version
+        continue-on-error: true
+        shell: python
+        run: |
+          import os
+        
+          input_filename = "${{ env.filename }}"
+          input_filename = input_filename.replace(".", "_")
+          while input_filename.count("__") != 0:
+              input_filename = input_filename.replace("__", "_")
+          splitted = input_filename.split("_")
+          if len(splitted) < 2:
+              print("No version provided")
+              exit(-1)
+          version_tokens = splitted[-2:]
+          for s in version_tokens:
+              if not str.isdigit(s):
+                  print("No version provided or version representation error")
+                  exit(-1)
+          custom_client_version = f"{version_tokens[0]}.{version_tokens[1]}"
+          appname_custom_version = "${{ env.appname }}"
+          appname_custom_version = f"{appname_custom_version} {custom_client_version}"
+          with open(os.environ['GITHUB_ENV'], "a", encoding='utf-8') as env_file:
+              env_file.write(f"custom_client_version={custom_client_version}\n")
+              env_file.write(f"appname_custom_version={appname_custom_version}\n")
+
+      - name: sanitize custom version and appname
+        if: env.custom_client_version == '' || env.appname_custom_version == ''
+        shell: python
+        run: |
+          import os
+          
+          blank_version = "0.0"
+          restore_appname = "${{ env.filename }}"
+          with open(os.environ['GITHUB_ENV'], "a", encoding='utf-8') as env_file:
+              env_file.write(f"custom_client_version={blank_version}\n")
+              env_file.write(f"appname_custom_version={restore_appname}\n")
 
       - name: Set rdgen value
         if: ${{ env.rdgen == 'true' }}
@@ -181,6 +238,8 @@ jobs:
           sed -i -e 's|OriginalFilename = "rustdesk.exe"|OriginalFilename = "${{ env.appname }}.exe"|' ./libs/portable/Cargo.toml
           # ./src/lang/en.rs
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ env.appname }}|' {} \;
+          sed -E -i 's/(.*"powered_by_me",\s*")[^"]*(".*)/\1${{ env.appname_custom_version }}\2/' ./src/lang/ru.rs
+          sed -E -i 's/(.*"Slogan_tip",\s*")[^"]*(".*)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' ./src/lang/ru.rs
 
       - name: fix registry if appname has a space
         if: contains(env.appname, ' ')
@@ -207,12 +266,7 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          sed -i -e 's|PURSLANE|${{ env.compname }}|' ./res/msi/preprocess.py
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/preprocess.py
-          sed -i -e 's|Copyright &copy; 2025 Purslane Ltd.|Copyright \&copy; 2025 ${{ env.compname }}|' ./src/ui/index.tis
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./Cargo.toml
-          sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
-          sed -i -e 's|Purslane Ltd.|${{ env.compname }}|' ./res/setup.nsi
+          echo 'All Purslane Ltd rights reserved!'
              
       - name: change url to custom
         if: env.urlLink != 'https://rustdesk.com'
@@ -307,20 +361,27 @@ jobs:
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-${{ matrix.job.vcpkg-triplet }}-rel-out.log" || true
         shell: bash
 
-      - name: icon stuff
-        if: ${{ env.iconlink_url != 'false' }}
-        continue-on-error: true
-        shell: bash
-        run: |
-          mv ./res/icon.ico ./res/icon.ico.bak
-          mv ./res/icon.png ./res/icon.png.bak
-          mv ./res/tray-icon.ico ./res/tray-icon.ico.bak
-
       - name: magick stuff
         if: ${{ env.iconlink_url != 'false' }}
         continue-on-error: true
         run: |
-          Invoke-WebRequest -Uri ${{ env.iconlink_url }}/get_png?filename=${{ env.iconlink_file }}"&"uuid=${{ env.iconlink_uuid }} -OutFile ./res/icon.png 
+          $user = '${{ secrets.AUTH_URL_USER }}'
+          $pass = '${{ secrets.AUTH_URL_PASS }}'
+          
+          $pair = "$($user):$($pass)"
+          
+          $encodedCreds = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($pair))
+          
+          $basicAuthValue = "Basic $encodedCreds"
+          
+          $Headers = @{
+              Authorization = $basicAuthValue
+          }
+          Invoke-WebRequest -Uri ${{ secrets.GENURL }}/get_png?filename=${{ env.iconlink_file }}"&"uuid=${{ env.iconlink_uuid }} -Headers $Headers -OutFile ./res/iconx.png 
+          mv ./res/icon.ico ./res/icon.ico.bak
+          mv ./res/icon.png ./res/icon.png.bak
+          mv ./res/tray-icon.ico ./res/tray-icon.ico.bak
+          mv ./res/iconx.png ./res/icon.png
           mv ./res/32x32.png ./res/32x32.png.bak
           mv ./res/64x64.png ./res/64x64.png.bak
           mv ./res/128x128.png ./res/128x128.png.bak
