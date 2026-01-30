@@ -248,6 +248,10 @@ jobs:
                  -e 's/\(.*"Slogan_tip",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' \
           		   ./src/lang/ru.rs
           sed -i -e 's/translate("Slogan_tip")/"${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}"/' ./src/ui/index.tis
+          sed -i -e "s|open('src/ui/index.html')|open('src/ui/index.html', encoding='UTF8')|" \
+                 -e "s|open('src/ui/index.tis')|open('src/ui/index.tis', encoding='UTF8')|" \
+                 -e "s|open('src/ui/inline.rs', 'wt')|open('src/ui/inline.rs', 'wt', encoding='UTF8')|" \
+                 ./res/inline-sciter.py
 
       - name: fix registry if appname has a space
         if: contains(env.appname, ' ')
