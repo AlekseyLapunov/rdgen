@@ -267,6 +267,12 @@ jobs:
           sed -i -e 's|"RustDesk"|"${{ env.appname }}"|' ./flutter/windows/runner/Runner.rc
           # ./src/lang/en.rs
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ env.appname }}|' {} \;
+
+      - name: preserve rustdesk credentials
+        if: env.appname != 'rustdesk'
+        continue-on-error: true
+        shell: bash
+        run: |
           sed -i -e 's/\(.*"powered_by_me",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}\2/' \
                  -e 's/\(.*"Slogan_tip",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' \
           		   ./src/lang/ru.rs
