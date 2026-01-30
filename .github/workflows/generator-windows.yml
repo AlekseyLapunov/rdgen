@@ -265,10 +265,11 @@ jobs:
           sed -i -e 's|VALUE "InternalName", "rustdesk" "\0"|VALUE "InternalName", "${{ env.appname }}" "\0"|' ./flutter/windows/runner/Runner.rc
           sed -i -e 's|"rustdesk.exe"|"${{ env.filename }}"|' ./flutter/windows/runner/Runner.rc
           sed -i -e 's|"RustDesk"|"${{ env.appname }}"|' ./flutter/windows/runner/Runner.rc
-          # ./src/lang
+          # ./src/lang/en.rs
           find ./src/lang -name "*.rs" -exec sed -i -e 's|RustDesk|${{ env.appname }}|' {} \;
-          sed -E -i 's/(.*"powered_by_me",\s*")[^"]*(".*)/\1${{ env.appname_custom_version }}\2/' ./src/lang/ru.rs
-          sed -E -i 's/(.*"Slogan_tip",\s*")[^"]*(".*)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' ./src/lang/ru.rs
+          sed -i -e 's/\(.*"powered_by_me",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}\2/' \
+                 -e 's/\(.*"Slogan_tip",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' \
+          		   ./src/lang/ru.rs
 
       - name: fix registry if appname has a space
         if: contains(env.appname, ' ')
@@ -289,21 +290,6 @@ jobs:
           sed -i -e 's|{subkey}|\\\"{subkey}\\\"|' ./src/platform/windows.rs
           sed -i -e 's|reg delete HKEY_CLASSES_ROOT\\\\.{ext} /f|reg delete \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\" /f|' ./src/platform/windows.rs
           sed -i -e 's|reg delete HKEY_CLASSES_ROOT\\\\{ext} /f|reg delete \\\"HKEY_CLASSES_ROOT\\\\{ext}\\\" /f|' ./src/platform/windows.rs
-          
-      - name: change company name
-        if: env.compname != 'Purslane Ltd'
-        continue-on-error: true
-        shell: bash
-        run: |
-          echo 'All Purslane Ltd rights reserved!'
-          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/lib/desktop/pages/desktop_setting_page.dart
-          #sed -i -e 's|PURSLANE|${{ env.compname }}|' ./res/msi/preprocess.py
-          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/preprocess.py
-          #sed -i -e 's|"Copyright © 2025 Purslane Ltd. All rights reserved."|"Copyright © 2025 ${{ env.compname }}. All rights reserved."|' ./flutter/windows/runner/Runner.rc
-          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./flutter/windows/runner/Runner.rc
-          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./Cargo.toml
-          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./libs/portable/Cargo.toml
-          #sed -i -e 's|Purslane Ltd|${{ env.compname }}|' ./res/msi/Package/License.rtf
              
       - name: change url to custom
         if: env.urlLink != 'https://rustdesk.com'
@@ -316,7 +302,6 @@ jobs:
           sed -i -e "s|launchUrlString('https://rustdesk.com/privacy.html')|launchUrlString('${{ env.urlLink }}/privacy.html')|" ./flutter/lib/desktop/pages/desktop_setting_page.dart
           sed -i -e "s|const url = 'https://rustdesk.com/';|const url = '${{ env.urlLink }}';|" ./flutter/lib/mobile/pages/settings_page.dart
           sed -i -e "s|launchUrlString('https://rustdesk.com/privacy.html')|launchUrlString('${{ env.urlLink }}/privacy.html')|" ./flutter/lib/mobile/pages/settings_page.dart
-          #sed -i -e "s|https://rustdesk.com/privacy.html|${{ env.urlLink }}/privacy.html|" ./flutter/lib/desktop/pages/install_page.dart
           sed -i -e "s|rustdesk.com|${{ env.urlLink }}|" ./res/msi/Package/License.rtf
 
       - name: change download link to custom
