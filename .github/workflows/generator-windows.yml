@@ -274,9 +274,8 @@ jobs:
         shell: bash
         run: |
           sed -i -e 's/\(.*"powered_by_me",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}\2/' \
-                 -e 's/\(.*"Slogan_tip",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}\2/' \
+                 -e 's/\(.*"Slogan_tip",\s*"\)[^"]*\(".*\)/\1${{ env.appname_custom_version }}: Основано на Rust.Desk ${{ inputs.version }}\2/' \
           		   ./src/lang/ru.rs
-          sed -i -e "s|translate('Slogan_tip'),|'${{ env.appname_custom_version }}: Основано на RustDesk ${{ inputs.version }}',|" ./flutter/lib/desktop/pages/desktop_setting_page.dart
 
       - name: fix registry if appname has a space
         if: contains(env.appname, ' ')
